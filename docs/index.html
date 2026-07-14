@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>CloudLens vLM on AWS | Keysight</title>
+<meta name="description" content="Build the Keysight CloudLens Virtual License Manager as an AWS AMI and deploy it in commercial AWS or GovCloud, with one interactive command."/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23E90029'/%3E%3Cpath d='M8 20 L16 8 L24 20 Z' fill='%23fff'/%3E%3C/svg%3E"/>
+<style>
+:root{
+  --red:#E90029; --red-d:#b0121f; --navy:#1B2A4A; --ink:#1b2a4a; --muted:#5a6675;
+  --bg:#f5f7fa; --card:#ffffff; --line:#e4e9f0; --code-bg:#0d1117; --code-fg:#e6edf3;
+  --grn:#1f9d55; --blu:#145a9e;
+}
+:root[data-theme="dark"]{
+  --ink:#e6edf3; --muted:#9aa7b8; --bg:#0e1420; --card:#161c28; --line:#26303f;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e6edf3;--muted:#9aa7b8;--bg:#0e1420;--card:#161c28;--line:#26303f;}}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5}
+.bar{background:linear-gradient(90deg,var(--red-d),var(--red));color:#fff;text-align:center;font-weight:800;letter-spacing:.32em;font-size:13px;padding:11px}
+.wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+a{color:var(--red);text-decoration:none}
+h1{font-size:52px;line-height:1.05;margin:.2em 0;letter-spacing:-.02em}
+h2{font-size:30px;margin:1.6em 0 .5em;letter-spacing:-.01em}
+h3{font-size:18px;margin:1.2em 0 .3em}
+.sub{font-size:19px;color:var(--muted);max-width:640px}
+.pill{display:inline-block;background:rgba(233,0,41,.09);color:var(--red);font-weight:700;font-size:12px;letter-spacing:.08em;padding:6px 13px;border-radius:20px;text-transform:uppercase}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding:54px 0 30px}
+@media(max-width:840px){.hero{grid-template-columns:1fr}h1{font-size:40px}}
+.badges{margin-top:22px;display:flex;flex-wrap:wrap;gap:9px}
+.badge{font-size:13px;font-weight:600;padding:6px 12px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--muted)}
+.badge.ok{color:var(--grn);border-color:rgba(31,157,85,.35);background:rgba(31,157,85,.08)}
+.badge.gov{color:var(--blu);border-color:rgba(20,90,158,.3);background:rgba(20,90,158,.08)}
+.term{background:var(--code-bg);border-radius:14px;box-shadow:0 24px 60px -24px rgba(0,0,0,.5);overflow:hidden;font-family:"SFMono-Regular",Menlo,Consolas,monospace;font-size:12.5px}
+.term .top{background:#161b22;padding:9px 14px;display:flex;gap:7px;align-items:center}
+.dot{width:11px;height:11px;border-radius:50%}
+.term .body{padding:16px 18px;color:var(--code-fg);white-space:pre;overflow-x:auto;line-height:1.55}
+.c-red{color:#ff5f8f}.c-yel{color:#ffd645}.c-grn{color:#4fd67a}.c-cyn{color:#3fd0e0}.c-blu{color:#5a9be0}.c-gry{color:#8a94a6}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 26px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:840px){.grid2,.grid3{grid-template-columns:1fr}}
+pre.code{background:var(--code-bg);color:var(--code-fg);border-radius:12px;padding:16px 18px;overflow-x:auto;font-family:Menlo,Consolas,monospace;font-size:13.5px;line-height:1.6}
+pre.code .p{color:#6ee7a8}
+.callout{border-left:4px solid var(--red);background:rgba(233,0,41,.06);border-radius:0 12px 12px 0;padding:16px 20px;margin:16px 0}
+.callout b{color:var(--red)}
+.pipe{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0 4px}
+.node{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-weight:600;font-size:14px}
+.node small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.arw{color:var(--red);font-weight:800;font-size:18px}
+.btn{display:inline-block;background:linear-gradient(180deg,var(--red),var(--red-d));color:#fff;font-weight:700;padding:12px 22px;border-radius:12px;box-shadow:0 8px 18px -8px rgba(233,0,41,.6);margin:6px 8px 6px 0}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.foot{border-top:1px solid var(--line);margin-top:60px;padding:28px 0;color:var(--muted);font-size:14px;text-align:center}
+.toggle{position:fixed;top:52px;right:16px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--muted);z-index:5}
+ul.tick{list-style:none;padding:0}ul.tick li{padding:5px 0 5px 26px;position:relative}
+ul.tick li::before{content:"✔";position:absolute;left:0;color:var(--grn);font-weight:800}
+</style>
+</head>
+<body>
+<div class="bar">KEYSIGHT TECHNOLOGIES</div>
+<button class="toggle" id="tg">◐ theme</button>
+<div class="wrap">
+
+  <section class="hero">
+    <div>
+      <span class="pill">Verified on real AWS</span>
+      <h1>CloudLens vLM<br/>on AWS</h1>
+      <p class="sub">Build the Keysight Virtual License Manager as an AMI and deploy it in commercial AWS or GovCloud, with one interactive command.</p>
+      <div style="margin-top:22px">
+        <a class="btn" href="#quickstart">Quick start</a>
+        <a class="btn ghost" href="CloudLens_vLM_AMI_AWS_GovCloud_Runbook.pdf">Read the runbook (PDF)</a>
+      </div>
+      <div class="badges">
+        <span class="badge ok">AMI import verified</span>
+        <span class="badge gov">Commercial + GovCloud</span>
+        <span class="badge">Interactive wizard</span>
+        <span class="badge">x86_64 · HVM · ENA</span>
+      </div>
+    </div>
+    <div class="term">
+      <div class="top"><span class="dot" style="background:#ff5f56"></span><span class="dot" style="background:#ffbd2e"></span><span class="dot" style="background:#27c93f"></span></div>
+<div class="body"><span class="c-grn">$ ./deploy-cloudlens-vlm.sh --profile autopilot</span>
+
+<span class="c-red">╔══════════════════════════════════════════════╗</span>
+<span class="c-red">║   </span><span class="c-yel">KEYSIGHT</span><span class="c-red">   CloudLens vLM   AWS Deployment Wizard  ║</span>
+<span class="c-red">╚══════════════════════════════════════════════╝</span>
+
+<span class="c-blu">1.  Choose your AWS cloud</span>
+<span class="c-cyn">? </span>Which AWS partition are you deploying to?
+    1) Commercial AWS   <span class="c-grn">(recommended)</span>
+    2) AWS GovCloud
+<span class="c-grn">✔ </span>Account 466778915280   partition aws
+
+<span class="c-blu">2.  vLM image (AMI)</span>
+<span class="c-cyn">? </span>Use an existing AMI or build a fresh one?
+    1) Use most recent  <span class="c-grn">(recommended)</span>
+    2) Build a new AMI from the vLM image
+
+<span class="c-grn">╔══════════════════════════════════════════════╗</span>
+<span class="c-grn">║   CloudLens vLM is deploying. Access below.  ║</span>
+<span class="c-grn">╚══════════════════════════════════════════════╝</span>
+   vLM UI    https://&lt;public-ip&gt;
+   Login     admin / admin
+<span class="c-grn">   Done.</span></div>
+    </div>
+  </section>
+
+  <div class="callout">
+    <b>Download the image from Keysight.</b> Get the official CloudLens vLM image (qcow2 or vhd) only from the Keysight software download portal at <a href="https://software.keysight.com">software.keysight.com</a>. Match the version to your CloudLens and vPB deployment. Do not use an unofficial image.
+  </div>
+
+  <h2 id="quickstart">Quick start</h2>
+  <pre class="code"><span class="p">git clone</span> https://github.com/Keysight-Tech/cloudlens-vlm-aws.git
+<span class="p">cd</span> cloudlens-vlm-aws
+<span class="p">chmod</span> +x *.sh
+
+<span class="c-gry"># download the official vLM image from software.keysight.com, then:</span>
+<span class="p">./deploy-cloudlens-vlm.sh</span> --profile &lt;your-aws-profile&gt;</pre>
+  <p class="sub" style="max-width:none">The wizard confirms your account and partition, offers to reuse or build the AMI, asks the instance size, count, key pair, subnet, and who may access it, then launches and prints the vLM URL and <code>admin / admin</code> login.</p>
+
+  <h2>How it works</h2>
+  <div class="pipe">
+    <div class="node">vLM image<small>qcow2 / vhd</small></div><span class="arw">→</span>
+    <div class="node">Convert<small>streamOptimized VMDK</small></div><span class="arw">→</span>
+    <div class="node">S3<small>upload</small></div><span class="arw">→</span>
+    <div class="node">Import<small>vmimport role</small></div><span class="arw">→</span>
+    <div class="node">AMI<small>register</small></div><span class="arw">→</span>
+    <div class="node">EC2 vLM<small>license the vPBs</small></div>
+  </div>
+
+  <h2>Two ways to run</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3>Interactive wizard <span class="badge ok">recommended</span></h3>
+      <p style="color:var(--muted)">Build the AMI and launch the vLM with friendly prompts.</p>
+      <pre class="code">./deploy-cloudlens-vlm.sh --profile autopilot</pre>
+    </div>
+    <div class="card">
+      <h3>Non-interactive engine</h3>
+      <p style="color:var(--muted)">Build only the AMI, for CI or scripts.</p>
+      <pre class="code">./create-cloudlens-vlm-ami.sh \
+  --image &lt;image&gt; --region us-east-1 \
+  --profile autopilot</pre>
+    </div>
+  </div>
+
+  <h2>GovCloud</h2>
+  <p class="sub" style="max-width:none">GovCloud is a separate partition (<code>arn:aws-us-gov</code>) with its own account and credentials. The same script auto-detects it. Point it at a GovCloud profile and region:</p>
+  <pre class="code">./deploy-cloudlens-vlm.sh --profile &lt;govcloud-profile&gt; --region us-gov-west-1</pre>
+  <p style="color:var(--muted)">It sees no vLM AMI there yet, offers to build one from the image, then launches the vLM. No code changes.</p>
+
+  <h2>Verified</h2>
+  <div class="grid3">
+    <div class="card"><h3>AMI import</h3><p style="color:var(--muted)">Built end to end from the vLM image; boot-tested by VM Import.</p></div>
+    <div class="card"><h3>Wizard</h3><p style="color:var(--muted)">Full interactive flow launched a vLM; UI and <code>admin/admin</code> login verified live.</p></div>
+    <div class="card"><h3>Portable</h3><p style="color:var(--muted)">Runs on macOS, Linux, and CloudShell; commercial and GovCloud partitions.</p></div>
+  </div>
+
+  <h2>Documentation</h2>
+  <ul class="tick">
+    <li>Full deployment runbook: <a href="CloudLens_vLM_AMI_AWS_GovCloud_Runbook.pdf">PDF</a> &middot; <a href="CloudLens_vLM_AMI_AWS_GovCloud_Runbook.docx">DOCX</a></li>
+    <li>Architecture, prerequisites, the automated and manual paths, GovCloud specifics, troubleshooting</li>
+    <li>The full wizard script is embedded in the runbook appendix</li>
+  </ul>
+
+  <div class="foot">
+    Keysight Technologies &nbsp;|&nbsp; Network Visibility and Cybersecurity &nbsp;|&nbsp;
+    <a href="https://github.com/Keysight-Tech/cloudlens-vlm-aws">GitHub</a>
+  </div>
+</div>
+<script>
+  var t=document.getElementById('tg');
+  t.onclick=function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'?'light':'dark';r.setAttribute('data-theme',d);};
+</script>
+</body>
+</html>

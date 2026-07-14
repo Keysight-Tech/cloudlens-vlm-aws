@@ -1,0 +1,7 @@
+# never commit vLM images (large; download from the Keysight portal)
+*.qcow2
+*.vhd
+*.vmdk
+*.raw
+*.img
+.DS_Store
