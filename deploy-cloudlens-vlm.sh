@@ -205,23 +205,38 @@ IIDS=$(aws_ ec2 run-instances --image-id "$AMI" --instance-type "$ITYPE" --count
   --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=cloudlens-vlm},{Key=Product,Value=CloudLens-vLM}]' \
   --query 'Instances[].InstanceId' --output text 2>&1) || fail "run-instances failed: $IIDS"
 ok "launched: $IIDS"
-note "waiting for running state ..."
+note "waiting for the OS to boot ..."
 aws_ ec2 wait instance-running --instance-ids $IIDS 2>/dev/null
 
-# ---- 9. summary ------------------------------------------------------------
-step "9." "Deployment summary"
-printf '\n  %s╔════════════════════════════════════════════════════════════╗%s\n' "$GRN" "$R"
-printf '  %s║   CloudLens vLM is deploying. Access details below.        ║%s\n' "$GRN" "$R"
-printf '  %s╚════════════════════════════════════════════════════════════╝%s\n\n' "$GRN" "$R"
+# ---- 9. bring the vLM online and verify ------------------------------------
+step "9." "Bringing the vLM online (this waits until the web UI answers)"
+printf '\n  %s================ Deployment summary ================%s\n\n' "$GRN$B" "$R"
+ALL_LIVE=true
 for id in $IIDS; do
   pub=$(aws_ ec2 describe-instances --instance-ids "$id" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text 2>/dev/null)
   prv=$(aws_ ec2 describe-instances --instance-ids "$id" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text 2>/dev/null)
-  printf '  %s%s%s\n' "$B" "$id" "$R"
-  printf '     %s🌐 vLM UI %s  https://%s\n' "$CYN" "$R" "$pub"
-  printf '     %s🔑 Login  %s  admin / admin   %s(change on first login)%s\n' "$CYN" "$R" "$DIM" "$R"
-  printf '     %s🔒 Private%s  %s   %s(point your vPBs here to license)%s\n' "$CYN" "$R" "$prv" "$DIM" "$R"
+  printf '  %s%s%s  %s%s%s ' "$B" "$id" "$R" "$DIM" "waiting for vLM UI on https://$pub" "$R"
+  status="still initializing"; scol="$YEL"
+  for i in $(seq 1 48); do        # up to ~8 minutes
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 "https://$pub/" 2>/dev/null)
+    if [ "$code" = "200" ] || [ "$code" = "302" ]; then
+      login=$(curl -sk --max-time 6 -X POST --data-urlencode "userid=admin" --data-urlencode "password=admin" "https://$pub/rest/license/login" 2>/dev/null)
+      case "$login" in
+        *'"success":true'*) status="LIVE - login verified (admin/admin)"; scol="$GRN";;
+        *) status="LIVE - web UI up";                                      scol="$GRN";;
+      esac
+      break
+    fi
+    printf '.'; sleep 10
+  done
+  [ "$scol" = "$YEL" ] && ALL_LIVE=false
+  printf '\n'
+  printf '     %sStatus %s  %s%s%s\n' "$CYN" "$R" "$scol" "$status" "$R"
+  printf '     %svLM UI %s   https://%s\n' "$CYN" "$R" "$pub"
+  printf '     %sLogin  %s   admin / admin   %s(change on first login)%s\n' "$CYN" "$R" "$DIM" "$R"
+  printf '     %sPrivate%s   %s   %s(point your vPBs here to license)%s\n\n' "$CYN" "$R" "$prv" "$DIM" "$R"
 done
-echo
-note "The vLM web app takes ~2 to 4 minutes after boot to answer on 443."
+if $ALL_LIVE; then ok "All vLM instances are LIVE and reachable."
+else warn "Some instances are still initializing; the vLM app can take a few minutes. Re-open the URL shortly."; fi
 note "Teardown:  aws ec2 terminate-instances --instance-ids $IIDS ; aws ec2 delete-security-group --group-id $SG"
-printf '\n  %s🚀  Done.%s\n\n' "$GRN$B" "$R"
+printf '\n  %sDone.%s\n\n' "$GRN$B" "$R"
